@@ -1,0 +1,2 @@
+AstrBot~=3.5.15
+jmcomic~=2.6.0

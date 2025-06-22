@@ -1,24 +1,49 @@
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
+from jmcomic import *
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件", "1.0.0")
+@register("jmcomic", "Charser", "一个用于获取漫画信息的插件", "1.0.0")
 class MyPlugin(Star):
+    help_msg = "使用方式: /jm <漫画ID>"
     def __init__(self, context: Context):
         super().__init__(context)
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
     
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        """这是一个 hello world 指令""" # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
+    # 注册指令的装饰器。指令名为 jm。
+    @filter.command("jm")
+    async def jm(self, event: AstrMessageEvent):
+        """这是 JMComic 指令 将会获取漫画信息"""
         user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
+        try:
+            # 检测用户信息中是否有漫画ID 若无则发送帮助信息
+            if not event.message_str:
+                yield event.plain_result(self.help_msg)
+                return
+            comic_id = int(event.message_str.strip())
+            # 检测漫画ID是否为正整数
+            if comic_id <= 0:
+                yield event.plain_result("漫画ID必须为正整数。\n" + self.help_msg)
+                return
+            client = JmOption.default().new_jm_client()
+            # 获取章节实体类
+            photo: JmPhotoDetail = client.get_photo_detail(comic_id, False)
+            # 获取漫画的第一张图片
+            image: JmImageDetail = photo[0]
+            image_url = image.download_url
+            # 发送获取到的图片以及漫画信息
+            yield event.chain_result([
+                event.make_result().url_image(image_url),
+                event.make_result().message(f"漫画名称: {photo.title}\n"+
+                                            f"作者: {photo.author}\n" +
+                                            f"tag: {photo.tags}\n")
+            ])
+
+        except Exception as e:
+            logger.error(f"获取漫画信息失败: {e}")
+            yield event.plain_result(f"获取漫画信息失败: {e}\n" + self.help_msg)
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
