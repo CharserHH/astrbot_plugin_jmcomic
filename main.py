@@ -42,7 +42,7 @@ class MyPlugin(Star):
             ])
 
         except Exception as e:
-            logger.error(f"获取漫画信息失败: {e}")
+            # logger.error(f"获取漫画信息失败: {e}")
             yield event.plain_result(f"获取漫画信息失败: {e}\n" + self.help_msg)
 
     async def terminate(self):
