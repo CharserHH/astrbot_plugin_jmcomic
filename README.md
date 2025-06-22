@@ -1,8 +1,10 @@
-# helloworld
+# JM Comic Plugin for AstrBot
 
-AstrBot 插件模板
+一个用于获取JmComic数据的插件，使用/jm唤起
 
-A template plugin for AstrBot plugin feature
+目前功能：
+
+/jm <jm号> : 获取漫画的概览
 
 # 支持
 
