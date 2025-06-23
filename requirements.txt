@@ -1,2 +1,2 @@
 AstrBot~=3.5.15
-jmcomic~=2.6.0
+git+https://github.com/hect0x7/JMComic-Crawler-Python.git#egg=jmcomic
