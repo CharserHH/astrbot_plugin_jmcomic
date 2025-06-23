@@ -7,15 +7,14 @@ import os
 
 @register("jmcomic", "Charser", "一个用于获取漫画信息的插件", "1.0.0")
 class MyPlugin(Star):
-    help_msg = "使用方式: /jm <漫画ID>"
-    client : JmHtmlClient|JmApiClient = None
+    jm_help_msg = "使用方式: /jm <漫画ID>"
+    jm_search_help_msg = "使用方式: /jm搜索 <关键词1> <关键词2>..."
     def __init__(self, context: Context):
         super().__init__(context)
 
 
     async def initialize(self):
         """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-        self.client = JmOption.default().new_jm_client()
 
     @filter.command("jm搜索")
     async def jm_search(self, event: AstrMessageEvent):
@@ -29,22 +28,24 @@ class MyPlugin(Star):
 
             # 检测用户信息中是否有关键词 若无则发送帮助信息
             if not comic_str or len(comic_str) < 2:
-                yield event.plain_result(self.help_msg)
+                yield event.plain_result(self.jm_search_help_msg)
                 return
             raw_keywords = comic_str[1].strip()
 
             # 处理关键词 用空格分割 再用‘ +’组合在一起
             keywords = ' +'.join(raw_keywords.split())
 
+            client = JmOption.default().new_jm_client()
+
             # 获取漫画搜索结果 page每次迭代返回album_id和title
-            page : JmSearchPage = self.client.search_site(keywords, 1)
+            page : JmSearchPage = client.search_site(keywords, 1)
             # 检测是否有搜索结果
             if not page or page.page_size <= 0:
-                yield event.plain_result(f"没有找到与'{raw_keywords}'相关的漫画。\n" + self.help_msg)
+                yield event.plain_result(f"没有找到与'{raw_keywords}'相关的漫画。\n" + self.jm_search_help_msg)
                 return
             answer_str = f"搜索结果: @{user_name} \n----------\n"
             for album_id, title in page:
-                photo: JmPhotoDetail = self.client.get_photo_detail(album_id, False)
+                photo: JmPhotoDetail = client.get_photo_detail(album_id, False)
                 # 组合漫画的相关信息
                 answer_str += f"jm号: {album_id}\n标题: {title}\n作者: {photo.author}\n标签: {photo.tags}\n----------\n"
             # 发送搜索结果
@@ -52,7 +53,7 @@ class MyPlugin(Star):
 
         except Exception as e:
             logger.error(f"搜索漫画失败: {e}")
-            yield event.plain_result(f"搜索漫画失败: {e}\n" + self.help_msg)
+            yield event.plain_result(f"搜索漫画失败: {e}\n" + self.jm_search_help_msg)
     
     # 注册指令的装饰器。指令名为 jm。
     @filter.command("jm")
@@ -67,15 +68,16 @@ class MyPlugin(Star):
 
             # 检测用户信息中是否有漫画ID 若无则发送帮助信息
             if not comic_str or len(comic_str) < 2:
-                yield event.plain_result(self.help_msg)
+                yield event.plain_result(self.jm_help_msg)
                 return
             comic_id = int(comic_str[1].strip())
             # 检测漫画ID是否为正整数
             if comic_id <= 0:
-                yield event.plain_result("漫画ID必须为正整数。\n" + self.help_msg)
+                yield event.plain_result("漫画ID必须为正整数。\n" + self.jm_help_msg)
                 return
+            client = JmOption.default().new_jm_client()
             # 获取章节实体类
-            photo: JmPhotoDetail = self.client.get_photo_detail(comic_id, False)
+            photo: JmPhotoDetail = client.get_photo_detail(comic_id, False)
             # 获取漫画的第一张图片
             image: JmImageDetail = photo[0]
             # image_url = image.download_url
@@ -84,7 +86,7 @@ class MyPlugin(Star):
             #检测是否有下载目录，如果没有则创建
             if not os.path.exists('./download'):
                 os.makedirs('./download')
-            self.client.download_by_image_detail(image, './download/' + image_name)
+            client.download_by_image_detail(image, './download/' + image_name)
             # 发送获取到的图片以及漫画信息
             # yield event.chain_result([
             #     event.make_result().url_image(image_url),
@@ -107,7 +109,7 @@ class MyPlugin(Star):
 
         except Exception as e:
             logger.error(f"获取漫画信息失败: {e}")
-            yield event.plain_result(f"获取漫画信息失败: {e}\n" + self.help_msg)
+            yield event.plain_result(f"获取漫画信息失败: {e}\n" + self.jm_help_msg)
 
     async def terminate(self):
         """可选择实现异步的插件销毁方法，当插件被卸载/停用时会调用。"""
